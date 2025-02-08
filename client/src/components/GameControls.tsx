@@ -1,14 +1,6 @@
+import { Box, Button, Typography, LinearProgress } from '@mui/material';
 import { useState } from 'react';
-import {
-  Paper,
-  Typography,
-  Button,
-  Box,
-  TextField,
-  Snackbar,
-  Alert,
-} from '@mui/material';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import PaymentRequestModal from './PaymentRequestModal';
 
 interface GameControlsProps {
   gameId: string;
@@ -17,6 +9,12 @@ interface GameControlsProps {
   isStarting: boolean;
   totalSquares: number;
   filledSquares: number;
+  players: any[];
+  squares: any[];
+  squareCost: number;
+  ownerEmail: string;
+  gameName: string;
+  onVenmoUpdate: (playerId: string, username: string) => Promise<void>;
 }
 
 export default function GameControls({
@@ -26,82 +24,65 @@ export default function GameControls({
   isStarting,
   totalSquares,
   filledSquares,
+  players,
+  squares,
+  squareCost,
+  ownerEmail,
+  gameName,
+  onVenmoUpdate
 }: GameControlsProps) {
-  const [showCopiedMessage, setShowCopiedMessage] = useState(false);
-  const inviteLink = `${window.location.origin}/join/${gameId}`;
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const progress = (filledSquares / totalSquares) * 100;
 
   const handleStartGame = () => {
-    if (filledSquares < totalSquares) {
-      const confirmed = window.confirm(
-        `Only ${filledSquares} out of ${totalSquares} squares are filled. Are you sure you want to start the game?`
-      );
-      if (!confirmed) return;
-    }
-    onStartGame();
-  };
-
-  const copyInviteLink = async () => {
-    try {
-      await navigator.clipboard.writeText(inviteLink);
-      setShowCopiedMessage(true);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
+    setShowPaymentModal(true);
   };
 
   return (
-    <Paper sx={{ p: 3, mt: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        Game Controls
-      </Typography>
-
-      {!isGameActive && (
-        <Box sx={{ mb: 3 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            fullWidth
-            size="large"
-            onClick={handleStartGame}
-            disabled={isStarting}
-          >
-            {isStarting ? 'Starting...' : 'Start Game'}
-          </Button>
-          {filledSquares < totalSquares && (
-            <Alert severity="warning" sx={{ mt: 1 }}>
-              {`${totalSquares - filledSquares} squares still available`}
-            </Alert>
-          )}
+    <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            Grid Progress
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {filledSquares}/{totalSquares} squares
+          </Typography>
         </Box>
-      )}
-
-      <Typography variant="subtitle2" gutterBottom>
-        Invite Link
-      </Typography>
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-        <TextField
-          fullWidth
-          value={inviteLink}
-          size="small"
-          InputProps={{
-            readOnly: true,
+        <LinearProgress 
+          variant="determinate" 
+          value={progress} 
+          sx={{ 
+            height: 8,
+            borderRadius: 1
           }}
         />
-        <Button
-          variant="outlined"
-          startIcon={<ContentCopyIcon />}
-          onClick={copyInviteLink}
-        >
-          Copy
-        </Button>
       </Box>
 
-      <Snackbar
-        open={showCopiedMessage}
-        autoHideDuration={2000}
-        onClose={() => setShowCopiedMessage(false)}
-        message="Invite link copied to clipboard"
+      <Button
+        variant="contained"
+        color="primary"
+        fullWidth
+        onClick={handleStartGame}
+        disabled={isStarting}
+      >
+        {isStarting ? 'Starting Game...' : 'Start Game'}
+      </Button>
+
+      <PaymentRequestModal
+        open={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onStartGame={() => {
+          setShowPaymentModal(false);
+          onStartGame();
+        }}
+        players={players}
+        squares={squares}
+        squareCost={squareCost}
+        ownerEmail={ownerEmail}
+        gameName={gameName}
+        onVenmoUpdate={onVenmoUpdate}
       />
-    </Paper>
+    </Box>
   );
 } 

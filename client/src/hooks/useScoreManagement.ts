@@ -3,16 +3,26 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateGameScore, updateCurrentScore } from '../api/client';
 import { Score, GameScores } from '../types/game';
 
+// Extend Score type to allow string values during input
+type InputScore = {
+  vertical: number | string;
+  horizontal: number | string;
+};
+
 export function useScoreManagement(gameId: string, initialScores?: GameScores) {
   const queryClient = useQueryClient();
-  const [inputValues, setInputValues] = useState<Score>(() => 
-    initialScores?.current || { vertical: 0, horizontal: 0 }
-  );
+  const [inputValues, setInputValues] = useState<InputScore>(() => ({
+    vertical: initialScores?.current?.vertical ?? 0,
+    horizontal: initialScores?.current?.horizontal ?? 0
+  }));
 
   // Update input values when server state changes
   useEffect(() => {
     if (initialScores?.current) {
-      setInputValues(initialScores.current);
+      setInputValues({
+        vertical: initialScores.current.vertical,
+        horizontal: initialScores.current.horizontal
+      });
     }
   }, [initialScores?.current?.vertical, initialScores?.current?.horizontal]);
 
@@ -59,19 +69,28 @@ export function useScoreManagement(gameId: string, initialScores?: GameScores) {
 
   const handleScoreChange = (team: 'vertical' | 'horizontal', value: string) => {
     const sanitizedValue = value.replace(/[^0-9]/g, '');
-    const numValue = parseInt(sanitizedValue) || 0;
     setInputValues(prev => ({
       ...prev,
-      [team]: numValue
+      [team]: sanitizedValue === '' ? '' : parseInt(sanitizedValue)
     }));
   };
 
   const handleCurrentScoreSubmit = () => {
-    updateCurrentScoreMutation.mutate(inputValues);
+    // Convert empty values to 0 before submitting
+    const scoreToSubmit: Score = {
+      vertical: typeof inputValues.vertical === 'string' ? 0 : inputValues.vertical,
+      horizontal: typeof inputValues.horizontal === 'string' ? 0 : inputValues.horizontal
+    };
+    updateCurrentScoreMutation.mutate(scoreToSubmit);
   };
 
-  const handleQuarterSave = (quarter: keyof GameScores, score: Score) => {
-    updateQuarterScoreMutation.mutate({ quarter, score });
+  const handleQuarterSave = (quarter: keyof GameScores, score: InputScore) => {
+    // Convert empty values to 0 before submitting
+    const scoreToSubmit: Score = {
+      vertical: typeof score.vertical === 'string' ? 0 : score.vertical,
+      horizontal: typeof score.horizontal === 'string' ? 0 : score.horizontal
+    };
+    updateQuarterScoreMutation.mutate({ quarter, score: scoreToSubmit });
   };
 
   return {

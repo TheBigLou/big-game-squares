@@ -2,43 +2,18 @@ import { Request, Response } from 'express';
 import { Game } from '../models/Game';
 import { Player } from '../models/Player';
 import { Square } from '../models/Square';
+import { PlayerService } from '../services/playerService';
+import { handleError, throwNotFound, throwUnauthorized, throwBadRequest } from '../utils/errorHandler';
 
 export const joinGame = async (req: Request, res: Response) => {
   try {
     const { gameId } = req.params;
-    const { name, email } = req.body;
+    const { name, email, password, venmoUsername } = req.body;
 
-    const game = await Game.findOne({ gameId });
-    if (!game) {
-      return res.status(404).json({ error: 'Game not found' });
-    }
-
-    // Check if player already exists in this game
-    const existingPlayer = await Player.findOne({ gameId, email: email.toLowerCase() });
-    if (existingPlayer) {
-      // If the player exists but with a different name, update their name
-      if (existingPlayer.name !== name) {
-        existingPlayer.name = name;
-        await existingPlayer.save();
-      }
-      return res.status(200).json({ player: existingPlayer });
-    }
-
-    // Only check game status for new players
-    if (game.status !== 'setup') {
-      return res.status(400).json({ error: 'Game already started' });
-    }
-
-    const player = new Player({
-      gameId,
-      name,
-      email: email.toLowerCase(),
-    });
-
-    await player.save();
-    res.status(201).json({ player });
+    const result = await PlayerService.joinGame({ gameId, email, name, password, venmoUsername });
+    res.json(result);
   } catch (error) {
-    res.status(500).json({ error: 'Error joining game' });
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Error joining game' });
   }
 };
 
@@ -109,5 +84,31 @@ export const getPlayerSquares = async (req: Request, res: Response) => {
     res.json({ squares });
   } catch (error) {
     res.status(500).json({ error: 'Error fetching squares' });
+  }
+};
+
+export const togglePlayerPayment = async (req: Request, res: Response) => {
+  try {
+    const { gameId, playerId } = req.params;
+    const { ownerEmail } = req.body;
+
+    // Find the game and verify owner
+    const game = await Game.findOne({ gameId }) ?? throwNotFound('Game not found');
+    if (game.ownerEmail.toLowerCase() !== ownerEmail.toLowerCase()) {
+      throwUnauthorized();
+    }
+
+    // Find and update the player
+    const player = await Player.findById(playerId) ?? throwNotFound('Player not found');
+    if (player.gameId !== gameId) {
+      throwNotFound('Player not found');
+    }
+
+    player.hasPaid = !player.hasPaid;
+    await player.save();
+
+    res.json({ player });
+  } catch (error) {
+    handleError(error, res);
   }
 }; 

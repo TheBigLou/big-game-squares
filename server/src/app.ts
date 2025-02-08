@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { createServer } from 'http';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import routes from './routes';
 
 dotenv.config();
@@ -12,7 +12,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL,
+    origin: process.env.CLIENT_URL || '*',
     methods: ['GET', 'POST']
   }
 });
@@ -25,9 +25,19 @@ app.use(express.json());
 app.use('/api', routes);
 
 // Database connection
-mongoose.connect(process.env.MONGODB_URI!)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((err) => console.error('MongoDB connection error:', err));
+const mongoUri = process.env.MONGODB_URI;
+
+if (!mongoUri) {
+  throw new Error('MONGODB_URI environment variable is not set');
+}
+
+mongoose.connect(mongoUri)
+  .then(() => {
+    // MongoDB connected successfully
+  })
+  .catch((err) => {
+    throw new Error(`MongoDB connection error: ${err.message}`);
+  });
 
 // Basic route
 app.get('/health', (req, res) => {
@@ -35,13 +45,7 @@ app.get('/health', (req, res) => {
 });
 
 // Socket.io connection handling
-io.on('connection', (socket) => {
-  console.log('Client connected');
-  
-  socket.on('disconnect', () => {
-    console.log('Client disconnected');
-  });
-
+io.on('connection', (socket: Socket) => {
   // Join a game room
   socket.on('join-game', (gameId: string) => {
     socket.join(gameId);
@@ -53,8 +57,8 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  // Server is running
 }); 

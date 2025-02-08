@@ -23,6 +23,8 @@ interface GameScores {
 export interface IGame extends Document {
   gameId: string;
   ownerEmail: string;
+  ownerPasswordHash: string;
+  ownerVenmoUsername?: string;
   name: string;
   status: 'setup' | 'active' | 'completed';
   config: {
@@ -64,6 +66,14 @@ const gameSchema = new Schema<IGame>({
   ownerEmail: { 
     type: String, 
     required: true 
+  },
+  ownerPasswordHash: {
+    type: String,
+    required: true
+  },
+  ownerVenmoUsername: {
+    type: String,
+    required: false
   },
   name: { 
     type: String, 

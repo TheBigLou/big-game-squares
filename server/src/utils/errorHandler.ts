@@ -12,8 +12,6 @@ export class AppError extends Error {
 }
 
 export const handleError = (error: unknown, res: Response) => {
-  console.error('Error:', error);
-
   if (error instanceof AppError) {
     return res.status(error.statusCode).json({ 
       error: error.message,

@@ -13,7 +13,6 @@ import {
   Grid,
   Alert,
   InputAdornment,
-  Tooltip,
 } from '@mui/material';
 import PageNavigation from '../components/PageNavigation';
 
@@ -37,6 +36,8 @@ export default function CreateGamePage() {
   const [name, setName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
+  const [ownerPassword, setOwnerPassword] = useState('');
+  const [ownerVenmoUsername, setOwnerVenmoUsername] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [config, setConfig] = useState<GameConfig>({
     squareCost: 1,
@@ -48,8 +49,8 @@ export default function CreateGamePage() {
       final: 50
     },
     teams: {
-      vertical: 'Team 1',
-      horizontal: 'Team 2'
+      vertical: 'Chiefs',
+      horizontal: 'Eagles'
     }
   });
 
@@ -120,14 +121,20 @@ export default function CreateGamePage() {
       if (!name.trim()) throw new Error('Game name is required');
       if (!ownerName.trim()) throw new Error('Owner name is required');
       if (!ownerEmail.trim()) throw new Error('Owner email is required');
+      if (!ownerPassword.trim()) throw new Error('Owner password is required');
       if (!config.teams.vertical.trim()) throw new Error('Team 1 name is required');
       if (!config.teams.horizontal.trim()) throw new Error('Team 2 name is required');
       if (!isScoreValid) throw new Error('Score distribution must add up to 100%');
+      
+      // Clean Venmo username by removing @ if present
+      const cleanVenmoUsername = ownerVenmoUsername.trim().replace(/^@/, '');
       
       return createGame({
         name: name.trim(),
         ownerEmail: ownerEmail.trim().toLowerCase(),
         ownerName: ownerName.trim(),
+        ownerPassword: ownerPassword.trim(),
+        ownerVenmoUsername: cleanVenmoUsername || undefined,
         config: {
           ...config,
           teams: {
@@ -202,6 +209,29 @@ export default function CreateGamePage() {
               required
               margin="normal"
               disabled={createGameMutation.isPending}
+            />
+            <TextField
+              fullWidth
+              type="password"
+              label="Password"
+              value={ownerPassword}
+              onChange={(e) => setOwnerPassword(e.target.value)}
+              required
+              margin="normal"
+              disabled={createGameMutation.isPending}
+              helperText="You'll need this password to manage the game"
+            />
+            <TextField
+              fullWidth
+              label="Venmo Username (Optional)"
+              value={ownerVenmoUsername}
+              onChange={(e) => setOwnerVenmoUsername(e.target.value)}
+              margin="normal"
+              disabled={createGameMutation.isPending}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">@</InputAdornment>,
+              }}
+              helperText="Enter your Venmo username to make it easier for players to pay"
             />
 
             {/* Teams and Game Configuration in same row */}

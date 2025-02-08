@@ -1,6 +1,6 @@
 import { useParams, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getGame, getPendingSquares } from '../api/client';
+import { getGame, getPendingSquares, joinGame } from '../api/client';
 import { useEffect } from 'react';
 import {
   Container,
@@ -23,6 +23,7 @@ import {
   GameData
 } from '../types/game';
 import PlayerList from '../components/PlayerList';
+import VenmoCard from '../components/VenmoCard';
 
 export default function PlayerGamePage() {
   const { gameId } = useParams<{ gameId: string }>();
@@ -187,6 +188,26 @@ export default function PlayerGamePage() {
               />
             )}
 
+            <VenmoCard
+              isOwner={false}
+              ownerVenmoUsername={players.find(p => p.email.toLowerCase() === game.ownerEmail.toLowerCase())?.venmoUsername}
+              playerVenmoUsername={currentPlayer?.venmoUsername}
+              onVenmoUpdate={async (username: string) => {
+                await joinGame(gameId!, {
+                  email: email!,
+                  name: currentPlayer.name,
+                  venmoUsername: username
+                });
+                await refetch();
+              }}
+              squareCost={game.config.squareCost}
+              numSquares={confirmedSquares.length}
+              ownerEmail={game.ownerEmail}
+              gameName={game.name}
+              players={players}
+              squares={squares}
+            />
+
             <PlayerList
               players={players}
               squares={squares}
@@ -197,6 +218,7 @@ export default function PlayerGamePage() {
               squareLimit={game.config.squareLimit}
               currentUserEmail={email || undefined}
               gameStatus={game.status}
+              game={game}
             />
           </Grid>
         </Grid>

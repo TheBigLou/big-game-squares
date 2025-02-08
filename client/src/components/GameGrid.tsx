@@ -98,19 +98,11 @@ export default function GameGrid({
   // Add useEffect to log score updates
   useEffect(() => {
     if (currentScores) {
-      console.log('[GameGrid] Current scores updated:', currentScores);
+      // Scores are handled by the component's rendering logic
     }
   }, [currentScores]);
 
   // Find winning square based on current scores
-  const winningSquare = currentScores ? {
-    row: currentScores.vertical % 10,
-    col: currentScores.horizontal % 10
-  } : null;
-
-  if (winningSquare) {
-    console.log('[GameGrid] Winning square calculated:', winningSquare);
-  }
 
   return (
     <Paper sx={{ 
@@ -135,8 +127,8 @@ export default function GameGrid({
     }}>
       {/* Team name for vertical (top) team */}
       <Box sx={{ mb: 0.5, textAlign: 'center', height: 32 }}>
-        <Typography variant="subtitle1" color="primary" sx={{ lineHeight: 1.2 }}>
-          {teams.vertical}
+        <Typography variant="subtitle1" sx={{ lineHeight: 1.2, color: '#E31837' }}>
+          {teams.vertical} {currentScores ? `${currentScores.horizontal}` : ''}
         </Typography>
       </Box>
 
@@ -151,14 +143,14 @@ export default function GameGrid({
         }}>
           <Typography 
             variant="subtitle1" 
-            color="primary"
             sx={{ 
               transform: 'rotate(-90deg)',
               whiteSpace: 'nowrap',
-              lineHeight: 1.2
+              lineHeight: 1.2,
+              color: '#004C54'
             }}
           >
-            {teams.horizontal}
+            {teams.horizontal} {currentScores ? `${currentScores.vertical}` : ''}
           </Typography>
         </Box>
 
@@ -181,7 +173,7 @@ export default function GameGrid({
                 alignItems: 'center',
                 justifyContent: 'center',
                 height: 28,
-                bgcolor: 'primary.main',
+                bgcolor: '#E31837',
                 color: 'white',
                 fontWeight: 'bold',
                 borderRadius: 0.5,
@@ -201,7 +193,7 @@ export default function GameGrid({
                   alignItems: 'center',
                   justifyContent: 'center',
                   width: 32,
-                  bgcolor: 'primary.main',
+                  bgcolor: '#004C54',
                   color: 'white',
                   fontWeight: 'bold',
                   borderRadius: 0.5,

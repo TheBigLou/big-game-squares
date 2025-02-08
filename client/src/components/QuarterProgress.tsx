@@ -19,8 +19,8 @@ interface Square {
 }
 
 interface Score {
-  vertical: number;
-  horizontal: number;
+  vertical: number | string;
+  horizontal: number | string;
 }
 
 interface Payouts {
@@ -119,8 +119,8 @@ export default function QuarterProgress({
   let winningPlayer: Player | undefined;
   const scoreToUse = isActive ? scores?.current : score;
   if (scoreToUse) {
-    const verticalLastDigit = scoreToUse.vertical % 10;
-    const horizontalLastDigit = scoreToUse.horizontal % 10;
+    const verticalLastDigit = Number(scoreToUse.vertical) % 10;
+    const horizontalLastDigit = Number(scoreToUse.horizontal) % 10;
     const winningSquare = squares.find((s: Square) => 
       s.row === verticalLastDigit && s.col === horizontalLastDigit
     );
@@ -173,14 +173,14 @@ export default function QuarterProgress({
           {isActive && isOwner ? (
             <TextField
               fullWidth
-              type="number"
+              type="text"
               inputProps={{
-                min: 0,
-                max: 99,
+                inputMode: 'numeric',
+                pattern: '[0-9]*',
                 style: { WebkitAppearance: 'none', margin: 0 }
               }}
               label={`${config.teams.horizontal} Score`}
-              value={inputValues.vertical}
+              value={inputValues.vertical === '' ? '' : inputValues.vertical}
               onChange={(e) => onScoreChange?.('vertical', e.target.value)}
               size="small"
             />
@@ -194,14 +194,14 @@ export default function QuarterProgress({
           {isActive && isOwner ? (
             <TextField
               fullWidth
-              type="number"
+              type="text"
               inputProps={{
-                min: 0,
-                max: 99,
+                inputMode: 'numeric',
+                pattern: '[0-9]*',
                 style: { WebkitAppearance: 'none', margin: 0 }
               }}
               label={`${config.teams.vertical} Score`}
-              value={inputValues.horizontal}
+              value={inputValues.horizontal === '' ? '' : inputValues.horizontal}
               onChange={(e) => onScoreChange?.('horizontal', e.target.value)}
               size="small"
             />
@@ -245,7 +245,7 @@ export default function QuarterProgress({
       <Box sx={{ mt: 1 }}>
         <Chip 
           label={quarterStatus} 
-          color={isCompleted ? 'success' : isActive ? 'primary' : 'default'}
+          color={isCompleted ? 'success' : 'default'}
           size="small"
           sx={{ width: '100%' }}
         />

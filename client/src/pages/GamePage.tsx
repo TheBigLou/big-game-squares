@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getGame, startGame, joinGame, getPendingSquares } from '../api/client';
+import { getGame, startGame, joinGame, getPendingSquares, updateOwnerVenmo } from '../api/client';
 import {
   Container,
   Typography,
@@ -20,6 +20,7 @@ import GameInfoBar from '../components/GameInfoBar';
 import PlayerList from '../components/PlayerList';
 import QuarterProgress from '../components/QuarterProgress';
 import PlayerSelections from '../components/PlayerSelections';
+import VenmoCard from '../components/VenmoCard';
 import { useScoreManagement } from '../hooks/useScoreManagement';
 import { useGameErrors } from '../hooks/useGameErrors';
 import { useAuth } from '../hooks/useAuth';
@@ -37,7 +38,7 @@ export default function GamePage() {
   const { error, setError, handleError, clearError } = useGameErrors();
   
   // Consolidated states
-  const [gameState, setGameState] = useState<GameState>({
+  const [] = useState<GameState>({
     squares: {
       pending: [],
       revealedEmails: new Set()
@@ -262,7 +263,7 @@ export default function GamePage() {
           status={game.status}
           playerName={localStorage.getItem('name') || ''}
           playerEmail={localStorage.getItem('email') || ''}
-          isOwner={true}
+          isOwner={isOwner}
         />
 
         <Grid container spacing={4}>
@@ -280,7 +281,10 @@ export default function GamePage() {
               isSelectable={game.status === 'setup' && !!currentPlayer}
               gameStatus={game.status}
               teams={game.config.teams}
-              currentScores={isGameActive ? inputValues : undefined}
+              currentScores={isGameActive ? {
+                vertical: Number(inputValues.vertical) || 0,
+                horizontal: Number(inputValues.horizontal) || 0
+              } : undefined}
               players={players}
             />
           </Grid>
@@ -312,6 +316,54 @@ export default function GamePage() {
               />
             )}
 
+            <VenmoCard
+              isOwner={isOwner}
+              ownerVenmoUsername={players.find((p: Player) => p.email.toLowerCase() === data?.game.ownerEmail.toLowerCase())?.venmoUsername}
+              playerVenmoUsername={typeof currentPlayer === 'object' ? currentPlayer?.venmoUsername : undefined}
+              onVenmoUpdate={async (username) => {
+                try {
+                  if (isOwner) {
+                    const response = await updateOwnerVenmo(gameId!, {
+                      ownerEmail: email!,
+                      venmoUsername: username
+                    });
+                    // Update both game and player data in the cache
+                    queryClient.setQueryData(['game', gameId], (oldData: any) => ({
+                      ...oldData,
+                      game: response.game,
+                      players: oldData.players.map((p: Player) => 
+                        p.email.toLowerCase() === email?.toLowerCase()
+                          ? { ...p, venmoUsername: username }
+                          : p
+                      )
+                    }));
+                  } else if (currentPlayer && typeof currentPlayer === 'object') {
+                    const response = await joinGame(gameId!, {
+                      email: email!,
+                      name: currentPlayer.name,
+                      venmoUsername: username
+                    });
+                    // Update the cache with the new player data
+                    queryClient.setQueryData(['game', gameId], (oldData: any) => ({
+                      ...oldData,
+                      players: oldData.players.map((p: Player) => 
+                        p._id === response.player._id ? response.player : p
+                      )
+                    }));
+                  }
+                } catch (error) {
+                  console.error('Failed to update Venmo username:', error);
+                  throw error;
+                }
+              }}
+              squareCost={game.config.squareCost}
+              numSquares={confirmedSquares.length}
+              ownerEmail={data?.game.ownerEmail}
+              gameName={game.name}
+              players={players}
+              squares={squares}
+            />
+
             {/* Game Controls for owner */}
             {isOwner && game.status === 'setup' && (
               <GameControls
@@ -321,6 +373,22 @@ export default function GamePage() {
                 isStarting={startGameMutation.isPending}
                 totalSquares={100}
                 filledSquares={squares.length}
+                players={players}
+                squares={squares}
+                squareCost={game.config.squareCost}
+                ownerEmail={data?.game.ownerEmail}
+                gameName={game.name}
+                onVenmoUpdate={async (playerId, username) => {
+                  const player = players.find((p: Player) => p._id === playerId);
+                  if (!player) return;
+                  
+                  await joinGame(gameId!, {
+                    email: player.email,
+                    name: player.name,
+                    venmoUsername: username
+                  });
+                  await refetch();
+                }}
               />
             )}
 
@@ -334,6 +402,7 @@ export default function GamePage() {
               squareLimit={game.config.squareLimit}
               currentUserEmail={email || undefined}
               gameStatus={game.status}
+              game={game}
             />
           </Grid>
         </Grid>

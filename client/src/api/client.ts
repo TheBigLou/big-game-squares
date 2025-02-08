@@ -14,6 +14,8 @@ export const createGame = async (data: {
   name: string;
   ownerEmail: string;
   ownerName: string;
+  ownerPassword: string;
+  ownerVenmoUsername?: string;
   config: {
     squareCost: number;
     squareLimit: number;
@@ -67,7 +69,12 @@ export const updateCurrentScore = async (gameId: string, data: {
 };
 
 // Player API
-export const joinGame = async (gameId: string, data: { name: string; email: string }) => {
+export const joinGame = async (gameId: string, data: { 
+  name: string; 
+  email: string;
+  password?: string;
+  venmoUsername?: string;
+}) => {
   const response = await api.post(`/games/${gameId}/join`, data);
   return response.data;
 };
@@ -99,5 +106,18 @@ export const updatePendingSquares = async (gameId: string, data: {
 
 export const getPendingSquares = async (gameId: string) => {
   const response = await api.get(`/games/${gameId}/pending-squares`);
+  return response.data;
+};
+
+export const updateOwnerVenmo = async (gameId: string, data: {
+  ownerEmail: string;
+  venmoUsername: string;
+}) => {
+  const response = await api.post(`/games/${gameId}/owner-venmo`, data);
+  return response.data;
+};
+
+export const togglePlayerPayment = async (gameId: string, playerId: string, ownerEmail: string) => {
+  const response = await api.post(`/games/${gameId}/players/${playerId}/toggle-payment`, { ownerEmail });
   return response.data;
 }; 

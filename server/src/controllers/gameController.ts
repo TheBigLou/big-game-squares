@@ -56,8 +56,8 @@ const calculatePrizePool = async (gameId: string) => {
 
 export const createGame = async (req: Request, res: Response) => {
   try {
-    const { name, ownerEmail, ownerName, config } = req.body;
-    const result = await GameService.createGame({ name, ownerEmail, ownerName, config });
+    const { name, ownerEmail, ownerName, ownerPassword, config } = req.body;
+    const result = await GameService.createGame({ name, ownerEmail, ownerName, ownerPassword, config });
     res.json(result);
   } catch (error) {
     handleError(error, res);
@@ -110,8 +110,8 @@ export const updateCurrentScore = async (req: Request, res: Response) => {
 export const joinGame = async (req: Request, res: Response) => {
   try {
     const { gameId } = req.params;
-    const { email, name } = req.body;
-    const result = await PlayerService.joinGame({ gameId, email, name });
+    const { email, name, password, venmoUsername } = req.body;
+    const result = await PlayerService.joinGame({ gameId, email, name, password, venmoUsername });
     res.json(result);
   } catch (error) {
     handleError(error, res);
@@ -197,6 +197,17 @@ export const getPendingSquares = async (req: Request, res: Response) => {
     
     cleanupStalePendingSquares();
     res.json({ pendingSquares: pendingSquares.get(gameId) || [] });
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const updateOwnerVenmo = async (req: Request, res: Response) => {
+  try {
+    const { gameId } = req.params;
+    const { ownerEmail, venmoUsername } = req.body;
+    const result = await GameService.updateOwnerVenmo({ gameId, ownerEmail, venmoUsername });
+    res.json(result);
   } catch (error) {
     handleError(error, res);
   }

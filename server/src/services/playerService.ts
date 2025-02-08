@@ -1,12 +1,16 @@
 import { Player } from '../models/Player';
 import { Square } from '../models/Square';
 import { Game } from '../models/Game';
-import { throwNotFound, throwBadRequest } from '../utils/errorHandler';
+import { throwNotFound, throwBadRequest, throwUnauthorized } from '../utils/errorHandler';
+import { Document } from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 interface JoinGameParams {
   gameId: string;
   email: string;
   name: string;
+  password?: string;
+  venmoUsername?: string;
 }
 
 interface SelectSquareParams {
@@ -16,31 +20,64 @@ interface SelectSquareParams {
   col: number;
 }
 
+interface IPlayer extends Document {
+  _id: string;
+  gameId: string;
+  email: string;
+  name: string;
+}
+
 export class PlayerService {
   // Join a game
-  static async joinGame({ gameId, email, name }: JoinGameParams) {
+  static async joinGame({ gameId, email, name, password, venmoUsername }: JoinGameParams) {
     const game = await Game.findOne({ gameId }) ?? throwNotFound('Game not found');
-    
-    if (game.status !== 'setup') {
-      throwBadRequest('Game is no longer accepting new players');
-    }
-
     const normalizedEmail = email.toLowerCase();
+    
+    // Check if this is an owner login attempt
+    const isOwner = game.ownerEmail.toLowerCase() === normalizedEmail;
+    
+    if (isOwner) {
+      // Require password for owner
+      if (!password) {
+        throwBadRequest('Password is required for owner login');
+      }
+      
+      // Verify owner password
+      const isValidPassword = await bcrypt.compare(password!, game.ownerPasswordHash);
+      if (!isValidPassword) {
+        throwUnauthorized('Invalid password');
+      }
+    }
     
     // Check if player already exists
     let player = await Player.findOne({ gameId, email: normalizedEmail });
     
     if (!player) {
+      // Only check game status for new non-owner players
+      if (!isOwner && game.status !== 'setup') {
+        throwBadRequest('Game is no longer accepting new players');
+      }
+
+      // Create new player
       player = new Player({
         gameId,
         email: normalizedEmail,
-        name
+        name,
+        venmoUsername: venmoUsername?.trim() || undefined
       });
+      await player.save();
+
+    } else {
+      // Update existing player
+      player.name = name;
+      if (venmoUsername !== undefined) {
+        player.venmoUsername = venmoUsername.trim() || undefined;
+      }
       await player.save();
     }
 
     const squares = await Square.find({ gameId, playerId: player._id });
-    return { player, squares };
+    return { player: player.toObject(), squares };
   }
 
   // Select a square
@@ -64,8 +101,8 @@ export class PlayerService {
 
     // Check if player has reached square limit
     const playerSquares = await Square.find({ gameId, playerId: player._id });
-    if (game.config.maxSquaresPerPlayer && playerSquares.length >= game.config.maxSquaresPerPlayer) {
-      throwBadRequest(`Maximum of ${game.config.maxSquaresPerPlayer} squares per player reached`);
+    if (playerSquares.length >= game.config.squareLimit) {
+      throwBadRequest(`Maximum of ${game.config.squareLimit} squares per player reached`);
     }
 
     // Create new square
@@ -93,7 +130,7 @@ export class PlayerService {
 
   // Get all players in a game
   static async getGamePlayers(gameId: string) {
-    const players = await Player.find({ gameId });
+    const players = await Player.find({ gameId }) as IPlayer[];
     const squares = await Square.find({ gameId });
 
     // Group squares by player

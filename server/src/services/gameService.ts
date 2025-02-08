@@ -4,11 +4,14 @@ import { Square } from '../models/Square';
 import { generateGameId, generateRandomGrid, validateScoringConfig } from '../utils/gameUtils';
 import { throwNotFound, throwUnauthorized, throwBadRequest } from '../utils/errorHandler';
 import { Score, Quarter, DEFAULT_SCORES, GameConfig } from '../types/game';
+import bcrypt from 'bcryptjs';
 
 interface CreateGameParams {
   name: string;
   ownerEmail: string;
   ownerName: string;
+  ownerPassword: string;
+  ownerVenmoUsername?: string;
   config: GameConfig;
 }
 
@@ -17,6 +20,12 @@ interface UpdateScoreParams {
   ownerEmail: string;
   score: Score;
   quarter?: Quarter;
+}
+
+interface UpdateOwnerVenmoParams {
+  gameId: string;
+  ownerEmail: string;
+  venmoUsername: string;
 }
 
 export class GameService {
@@ -40,7 +49,7 @@ export class GameService {
   }
 
   // Create a new game
-  static async createGame({ name, ownerEmail, ownerName, config }: CreateGameParams) {
+  static async createGame({ name, ownerEmail, ownerName, ownerPassword, ownerVenmoUsername, config }: CreateGameParams) {
     if (!validateScoringConfig(config.scoring)) {
       throwBadRequest('Invalid scoring configuration');
     }
@@ -49,10 +58,16 @@ export class GameService {
     const setupGrid = generateRandomGrid();
     const finalGrid = generateRandomGrid();
     
+    // Hash the owner's password
+    const salt = await bcrypt.genSalt(10);
+    const ownerPasswordHash = await bcrypt.hash(ownerPassword, salt);
+    
     const game = new Game({
       gameId,
       name,
       ownerEmail,
+      ownerPasswordHash,
+      ownerVenmoUsername,
       config,
       grid: {
         rows: setupGrid.rows,
@@ -76,12 +91,17 @@ export class GameService {
       gameId,
       name: ownerName,
       email: ownerEmail.toLowerCase(),
+      venmoUsername: ownerVenmoUsername
     });
     await player.save();
 
     // Don't send the final grid in the response
-    const gameResponse = game.toObject();
+    const gameResponse = game.toObject() as {
+      grid: { final?: any };
+      ownerPasswordHash?: string;
+    };
     delete gameResponse.grid.final;
+    delete gameResponse.ownerPasswordHash; // Don't send password hash to client
     
     return { game: gameResponse, accessLink: `/game/${gameId}` };
   }
@@ -169,6 +189,28 @@ export class GameService {
 
     game.markModified('scores');
     await game.save();
+
+    return { game };
+  }
+
+  // Update owner's Venmo username
+  static async updateOwnerVenmo({ gameId, ownerEmail, venmoUsername }: UpdateOwnerVenmoParams) {
+    const game = await Game.findOne({ gameId }) ?? throwNotFound('Game not found');
+
+    if (game.ownerEmail.toLowerCase() !== ownerEmail.toLowerCase()) {
+      throwUnauthorized();
+    }
+
+    // Update Game model
+    game.ownerVenmoUsername = venmoUsername.trim() || undefined;
+    await game.save();
+
+    // Update Player model
+    const player = await Player.findOne({ gameId, email: ownerEmail.toLowerCase() });
+    if (player) {
+      player.venmoUsername = venmoUsername.trim() || undefined;
+      await player.save();
+    }
 
     return { game };
   }

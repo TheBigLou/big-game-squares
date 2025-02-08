@@ -11,6 +11,7 @@ router.get('/games/:gameId', gameController.getGame as any);
 router.post('/games/:gameId/start', gameController.startGame as any);
 router.post('/games/:gameId/score', validateUpdateScoreRequest, gameController.updateGameScore as any);
 router.post('/games/:gameId/current-score', validateUpdateCurrentScoreRequest, gameController.updateCurrentScore as any);
+router.post('/games/:gameId/owner-venmo', gameController.updateOwnerVenmo as any);
 router.post('/games/:gameId/pending-squares', gameController.updatePendingSquares as any);
 router.get('/games/:gameId/pending-squares', gameController.getPendingSquares as any);
 
@@ -18,5 +19,6 @@ router.get('/games/:gameId/pending-squares', gameController.getPendingSquares as
 router.post('/games/:gameId/join', playerController.joinGame as any);
 router.post('/games/:gameId/squares', playerController.selectSquare as any);
 router.get('/games/:gameId/squares', playerController.getPlayerSquares as any);
+router.post('/games/:gameId/players/:playerId/toggle-payment', playerController.togglePlayerPayment as any);
 
 export default router; 

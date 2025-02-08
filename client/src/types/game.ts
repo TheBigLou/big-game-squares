@@ -3,6 +3,8 @@ export interface Player {
   name: string;
   email: string;
   gameId: string;
+  venmoUsername?: string;
+  hasPaid?: boolean;
 }
 
 export interface Square {
@@ -46,6 +48,7 @@ export interface Game {
   gameId: string;
   name: string;
   ownerEmail: string;
+  ownerVenmoUsername?: string;
   status: 'setup' | 'active' | 'completed';
   config: GameConfig;
   grid?: {

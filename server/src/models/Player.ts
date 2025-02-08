@@ -4,6 +4,8 @@ export interface IPlayer extends Document {
   gameId: string;
   name: string;
   email: string;
+  venmoUsername?: string;
+  hasPaid?: boolean;
   joinedAt: Date;
 }
 
@@ -21,6 +23,8 @@ const playerSchema = new Schema<IPlayer>({
     type: String, 
     required: true 
   },
+  venmoUsername: { type: String, required: false },
+  hasPaid: { type: Boolean, default: false },
   joinedAt: { 
     type: Date, 
     default: Date.now 
